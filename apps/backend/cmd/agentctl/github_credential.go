@@ -256,7 +256,10 @@ func gitCredentialRequestForInput(input map[string]string, scope githubBrokerRes
 		return githubBrokerResolveRequest{}, fmt.Errorf("git repository does not match credential lease scope")
 	}
 	if scope.Path != "" {
-		if path != scope.Path {
+		// The scope path comes from a clone URL and keeps its ".git" suffix,
+		// while the gh CLI shim asks for a bare "/<owner>/<repo>". Compare the
+		// canonical spelling so both reach the same lease.
+		if githubauth.CanonicalCredentialPath(path) != githubauth.CanonicalCredentialPath(scope.Path) {
 			return githubBrokerResolveRequest{}, fmt.Errorf("git repository does not match credential lease scope")
 		}
 	} else {
