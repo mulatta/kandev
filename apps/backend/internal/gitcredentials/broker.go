@@ -32,9 +32,10 @@ var (
 )
 
 // Scope is the host-verified identity a lease may redeem for. Path is the
-// HTTPS remote path supplied to a provider resolver, canonicalized by
-// githubauth.CanonicalCredentialPath so a ".git" suffix never decides whether
-// a lease matches.
+// exact HTTPS remote path supplied to a provider resolver: plugin providers
+// compare it verbatim, so it is never rewritten. Redemption matching instead
+// compares githubauth.CanonicalCredentialPath of both sides, so a ".git"
+// suffix does not decide whether a lease matches.
 type Scope struct {
 	ProviderID   string
 	WorkspaceID  string
@@ -390,7 +391,7 @@ func normalizePath(raw string) (string, error) {
 	if err != nil || path == "" || !strings.HasPrefix(path, "/") || strings.ContainsAny(path, "?#") {
 		return "", fmt.Errorf("%w: path is invalid", ErrLeaseInvalid)
 	}
-	return githubauth.CanonicalCredentialPath(path), nil
+	return path, nil
 }
 
 func matchesRedemption(scope Scope, request Redemption) bool {
@@ -402,7 +403,7 @@ func matchesRedemption(scope Scope, request Redemption) bool {
 		scope.SessionID == strings.TrimSpace(request.SessionID) &&
 		scope.RepositoryID == strings.TrimSpace(request.RepositoryID) &&
 		strings.EqualFold(scope.Host, strings.TrimSpace(request.Host)) &&
-		scope.Path == path
+		githubauth.CanonicalCredentialPath(scope.Path) == githubauth.CanonicalCredentialPath(path)
 }
 
 func boundedTTL(requested time.Duration) time.Duration {
